@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">SimpleQuickReturn-sample</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="title_activity_list_view_sample">ListViewSampleActivity</string>
+    <string name="title_activity_scroll_view_sample">ScrollViewSampleActivity</string>
+    <string name="list_view_with_header_footer">ListView with header and footer</string>
+    <string name="list_view_with_header">ListView with header</string>
+    <string name="list_view_with_footer">ListView with footer</string>
+    <string name="header_text">Header</string>
+    <string name="footer_text">Footer</string>
+
+</resources>
