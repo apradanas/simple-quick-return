@@ -4,7 +4,6 @@ import com.apradanas.simplequickreturn.ListViewScrollObserver.OnListViewScrollLi
 
 import android.content.Context;
 import android.os.Build;
-//import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -24,12 +23,10 @@ import android.widget.ListView;
 public class SimpleQuickReturn {
 	protected static final String TAG = "SimpleQuickReturn";
 	
-	private Animation mHeaderAnimation;
-	private Animation mFooterAnimation;
+	private Animation mAnimation;
 	private boolean mIsSnapped = true;
 	private boolean mIsWaitingForExactHeaderHeight = true;
     private boolean mIsScrollingUp; // True if the last scroll movement was in the "up" direction.
-    private boolean mIsHeaderAnimated = false;
     private boolean mIsUsingHeader = false;
     private boolean mIsUsingFooter = false;
 	private Context mContext;
@@ -203,122 +200,87 @@ public class SimpleQuickReturn {
      */
     private void onScrollIdle() {
         if (mIsSnapped) {
-            // Only animate when header is out of its natural position (truly over the content).
+            // Only animate when header or footer is out of its natural position (truly over the content).
             return;
         }
-        if (mHeaderTop > 0 || mHeaderTop <= -mHeaderHeight) {
-            // Fully hidden, to need to animate.
-            return;
+        if(mIsUsingHeader) {
+	        if (mHeaderTop > 0 || mHeaderTop <= -mHeaderHeight) {
+	            // Fully hidden, to need to animate.
+	            return;
+	        }
+        } else {
+        	if (mFooterBottom > 0 || mFooterBottom <= -mFooterHeight) {
+	            // Fully hidden, to need to animate.
+	            return;
+	        }
         }
         if (mIsScrollingUp) {
-        	if(mIsUsingHeader) {
-        		hideHeader();
-        	}
-        	if(mIsUsingFooter) {
-        		hideFooter();
+        	if(mIsUsingHeader && mIsUsingFooter) {
+        		animateHeaderFooter(mHeaderTop, -mHeaderHeight, mFooterBottom, -mFooterHeight);
+        	} else if(mIsUsingHeader) {
+        		animateHeaderFooter(mHeaderTop, -mHeaderHeight, 0, 0);
+        	} else if(mIsUsingFooter) {
+        		animateHeaderFooter(0, 0, mFooterBottom, -mFooterHeight);
         	}
         } else {
-        	if(mIsUsingHeader) {
-        		showHeader();
-        	}
-        	if(mIsUsingFooter) {
-        		showFooter();
+        	if(mIsUsingHeader && mIsUsingFooter) {
+        		animateHeaderFooter(mHeaderTop, 0, mFooterBottom, 0);
+        	} else if(mIsUsingHeader) {
+        		animateHeaderFooter(mHeaderTop, 0, 0, 0);
+        	} else if(mIsUsingFooter) {
+        		animateHeaderFooter(0, 0, mFooterBottom, 0);
         	}
         }
     }
-
-    /**
-     * Shows the header using a simple downwards translation animation.
-     */
-    private void showHeader() {
-        animateHeader(mHeaderTop, 0);
-    }
     
-    /**
-     * Shows the footer using a simple downwards translation animation.
-     */
-    private void showFooter() {
-    	animateFooter(-mFooterHeight, mFooterBottom);
-    }
-
-    /**
-     * Hides the header using a simple upwards translation animation.
-     */
-    private void hideHeader() {
-        animateHeader(mHeaderTop, -mHeaderHeight);
-    }
-    
-    /**
-     * Hides the footer using a simple upwards translation animation.
-     */
-    private void hideFooter() {
-    	animateFooter(mFooterHeight, -mFooterBottom);
-    }
-
     /**
      * Animates the marginTop property of the header between two specified values.
      * @param startTop Initial value for the marginTop property.
      * @param endTop End value for the marginTop property.
      */
-    private void animateHeader(final float startTop, float endTop) {
+    private void animateHeaderFooter(final float startTop, float endTop, final float startBottom, float endBottom) {
         cancelAnimation();
-        mIsHeaderAnimated = false;
-        //Log.i(TAG, "animateHeader");
-        //Log.i(TAG, "headerTop=" + mHeaderTop);
         final float deltaTop = endTop - startTop;
-        //Log.i(TAG, "deltaTop=" + deltaTop);
-        mHeaderAnimation = new Animation() {
-            @Override
-            protected void applyTransformation(float interpolatedTime, Transformation t) {
-            	mIsHeaderAnimated = true;
-                mHeaderTop = (int) (startTop + deltaTop * interpolatedTime);
-                //Log.i(TAG, "applyTransformation:headerTop=" + mHeaderTop);
-                mRealHeaderLayoutParams.topMargin = mHeaderTop;
-                mRealHeader.setLayoutParams(mRealHeaderLayoutParams);
-            }
-        };
-        long duration = (long) (deltaTop / (float) mHeaderHeight * ANIMATION_DURATION);
-        //Log.i(TAG, "animateHeaderDuration=" + Math.abs(duration));
-        mHeaderAnimation.setDuration(Math.abs(duration));
-        mRealHeader.startAnimation(mHeaderAnimation);
-    }
-    
-    /**
-     * Animates the marginBottom property of the footer between two specified values.
-     * @param startBottom Initial value for the marginBottom property.
-     * @param endBottom End value for the marginBottom property.
-     */
-    private void animateFooter(final float startBottom, float endBottom) {
-        cancelAnimation();
-        //Log.i(TAG, "animateFooter");
-        //Log.i(TAG, "footerBottom=" + mFooterBottom);
         final float deltaBottom = endBottom - startBottom;
-        //Log.i(TAG, "deltaBottom=" + deltaBottom);
-        mFooterAnimation = new Animation() {
+        mAnimation = new Animation() {
             @Override
             protected void applyTransformation(float interpolatedTime, Transformation t) {
-            	if(mIsHeaderAnimated) {
+            	if(mIsUsingHeader) {
+	                mHeaderTop = (int) (startTop + deltaTop * interpolatedTime);
+	                mRealHeaderLayoutParams.topMargin = mHeaderTop;
+	                mRealHeader.setLayoutParams(mRealHeaderLayoutParams);
+            	}
+                if(mIsUsingFooter) {
 	                mFooterBottom = (int) (startBottom + deltaBottom * interpolatedTime);
-	                //Log.i(TAG, "applyTransformation:footerBottom=" + mFooterBottom);
 	                mRealFooterLayoutParams.bottomMargin = mFooterBottom;
 	                mRealFooter.setLayoutParams(mRealFooterLayoutParams);
-            	}
+                }
             }
         };
-        long duration = (long) (deltaBottom / (float) mFooterHeight * ANIMATION_DURATION);
-        //Log.i(TAG, "animateFooterDuration=" + Math.abs(duration));
-        mFooterAnimation.setDuration(Math.abs(duration));
-        mRealFooter.startAnimation(mFooterAnimation);
+        long duration = 0;
+        if(mIsUsingHeader) {
+	        duration = (long) (deltaTop / (float) mHeaderHeight * ANIMATION_DURATION);
+	        mAnimation.setDuration(Math.abs(duration));       
+        	mRealHeader.startAnimation(mAnimation);
+        	if(mIsUsingFooter) {
+        		mRealFooter.startAnimation(mAnimation);
+        	}
+        } else {
+        	duration = (long) (deltaBottom / (float) mFooterHeight * ANIMATION_DURATION);
+	        mAnimation.setDuration(Math.abs(duration));
+        	mRealFooter.startAnimation(mAnimation);
+        }
     }
 
     private void cancelAnimation() {
-        if (mHeaderAnimation != null) {
-            mRealHeader.clearAnimation();
-            mHeaderAnimation = null;
-        }
-        if(mFooterAnimation != null) {
-        	mRealFooter.clearAnimation();
-        	mFooterAnimation = null;
+        if(mAnimation != null) {
+        	if(mRealHeader != null) {
+        		mRealHeader.clearAnimation();
+        	}
+        	if(mRealFooter != null) {
+        		mRealFooter.clearAnimation();
+        	}
+        	mAnimation = null;
         }
     }
 
@@ -349,12 +311,10 @@ public class SimpleQuickReturn {
         }
         mIsScrollingUp = delta < 0;
         
-        // I'm aware that offsetTopAndBottom is more efficient, but it gave me trouble when scrolling to the bottom of the list
         if(mIsUsingHeader) {
         	mHeaderTop += delta;
 	        if (mRealHeaderLayoutParams.topMargin != mHeaderTop) {
 	            mRealHeaderLayoutParams.topMargin = mHeaderTop;
-	            //Log.v(TAG, "topMargin=" + mHeaderTop);
 	            mRealHeader.setLayoutParams(mRealHeaderLayoutParams);
 	        }
         }
@@ -362,7 +322,6 @@ public class SimpleQuickReturn {
         	mFooterBottom += delta;
         	if (mRealFooterLayoutParams.bottomMargin != mFooterBottom) {
             	mRealFooterLayoutParams.bottomMargin = mFooterBottom;
-            	//Log.v(TAG, "bottomMargin=" + mFooterBottom);
                 mRealFooter.setLayoutParams(mRealFooterLayoutParams);
             }
         }
